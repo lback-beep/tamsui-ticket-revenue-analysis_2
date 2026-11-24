@@ -1,0 +1,2713 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="artifact-type" content="dashboard">
+  <meta name="design-style" content="charter">
+  <title>淡水古蹟博物館營運數據解析暨營收優化模擬儀表板</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700&family=Noto+Sans+TC:wght@400;500;600;700&family=Libre+Caslon+Text:ital,wght@0,400;0,700;1,400&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      color-scheme: light;
+
+      /* Page and surfaces (Charter) */
+      --background: #f7f4ec;
+      --surface-container-low: #fffdf8;
+      --surface-container: #ece5d4;
+      --surface-container-high: #e3dac4;
+
+      /* Ink */
+      --on-surface: #1c1f26;
+      --on-surface-variant: #4f5360;
+
+      /* Rules */
+      --outline: #b08d57;
+      --outline-variant: #d9cfb8;
+
+      /* Accents */
+      --primary: #14213d;
+      --on-primary: #f7f4ec;
+      --primary-container: #e3e6ee;
+      --on-primary-container: #14213d;
+      --secondary: #2d5a4a;
+      --tertiary: #8a6a35;
+      --error: #9b2c2c;
+      --on-error: #f7f4ec;
+
+      /* Semantic & Focus */
+      --positive: #2d5a4a;
+      --warning: #8a6a35;
+      --focus: #14213d;
+
+      /* Data series, in order of use */
+      --data-1: #14213d;
+      --data-2: #8a6a35;
+      --data-3: #2d5a4a;
+      --data-4: #5b7aa0;
+      --data-5: #9b2c2c;
+      --data-context: #c2bba9;
+
+      /* Derived text-safe tints on navy & cream */
+      --on-navy-muted: color-mix(in srgb, var(--on-primary) 78%, var(--primary));
+      --on-navy-brass: color-mix(in srgb, var(--outline) 75%, var(--on-primary));
+      --positive-wash: color-mix(in srgb, var(--positive) 10%, var(--surface-container-low));
+      --error-wash: color-mix(in srgb, var(--error) 8%, var(--surface-container-low));
+
+      /* Fonts */
+      --font-headline: 'Noto Serif TC', 'Libre Caslon Text', serif;
+      --font-body: 'Noto Sans TC', 'Inter', sans-serif;
+      --font-label: 'Noto Sans TC', 'IBM Plex Mono', monospace;
+
+      /* Type scale (Dashboard / Tool) */
+      --display-size: clamp(1.75rem, 1.4rem + 1.2vw, 2.35rem);
+      --headline-size: clamp(1.25rem, 1.1rem + 0.5vw, 1.5rem);
+      --subhead-size: clamp(1.0625rem, 1rem + 0.25vw, 1.1875rem);
+      --body-size: clamp(0.9375rem, 0.9rem + 0.15vw, 1rem);
+      --label-size: 0.75rem;
+
+      /* Shape (Charter squared corners) */
+      --rounded: 0.125rem;
+      --rounded-lg: 0.125rem;
+      --rounded-full: 0.125rem;
+
+      /* Style effects */
+      --brass-rule: 2px solid var(--outline);
+      --brass-rule-thick: 3px solid var(--outline);
+      --hairline: 1px solid var(--outline-variant);
+      --navy-outline: 1px solid var(--primary);
+      --brass-outline: 1px solid var(--outline);
+      --leaf-underline: 0 1px 0 var(--outline-variant);
+
+      /* Spacing scale (4pt base) */
+      --space-xs: 0.25rem;
+      --space-sm: 0.5rem;
+      --space-md: 1rem;
+      --space-lg: 1.5rem;
+      --space-xl: 2.5rem;
+      --space-2xl: 4rem;
+      --space-3xl: 6rem;
+
+      /* Motion */
+      --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+      --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+      --dur-micro: 120ms;
+      --dur-short: 220ms;
+      --dur-long: 420ms;
+    }
+
+    /* Base reset */
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body {
+      overflow-x: clip;
+      margin: 0;
+      padding: 0;
+      background-color: var(--background);
+      color: var(--on-surface);
+      font-family: var(--font-body);
+      font-size: var(--body-size);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+    header { position: static !important; }
+
+    button, input, select, textarea {
+      font-family: inherit;
+    }
+
+    a, button, input, select, summary {
+      transition: background-color var(--dur-micro) var(--ease-out),
+                  color var(--dur-micro) var(--ease-out),
+                  box-shadow var(--dur-micro) var(--ease-out),
+                  opacity var(--dur-micro) var(--ease-out);
+    }
+
+    :focus-visible {
+      outline: 2px solid var(--focus);
+      outline-offset: 2px;
+    }
+
+    .title-band :focus-visible {
+      outline-color: var(--on-primary);
+    }
+
+    /* Title Band (Charter Treatment #1 & #2) */
+    .title-band {
+      background-color: var(--primary);
+      color: var(--on-primary);
+      border-bottom: var(--brass-rule-thick);
+      padding: var(--space-xl) var(--space-lg) var(--space-lg);
+    }
+
+    .title-band-inner {
+      max-width: 1240px;
+      margin: 0 auto;
+    }
+
+    .title-kicker-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-sm);
+      margin-bottom: var(--space-md);
+      padding-bottom: var(--space-sm);
+      border-bottom: 1px solid color-mix(in srgb, var(--outline) 45%, var(--primary));
+    }
+
+    .title-kicker {
+      font-family: var(--font-label);
+      font-size: var(--label-size);
+      font-weight: 600;
+      color: var(--on-navy-brass);
+      letter-spacing: 0.04em;
+    }
+
+    .scope-stamp {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-xs);
+      font-family: var(--font-label);
+      font-size: var(--label-size);
+      color: var(--on-primary);
+      border: 1px solid var(--on-navy-brass);
+      border-radius: var(--rounded);
+      padding: var(--space-xs) var(--space-sm);
+    }
+
+    .title-band h1 {
+      font-family: var(--font-headline);
+      font-weight: 400;
+      font-size: var(--display-size);
+      line-height: 1.15;
+      margin: 0 0 var(--space-sm) 0;
+      color: var(--on-primary);
+    }
+
+    .title-band .lede {
+      color: var(--on-navy-muted);
+      max-width: 72ch;
+      margin: 0 0 var(--space-lg) 0;
+      font-size: var(--body-size);
+    }
+
+    .jump-nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-sm);
+    }
+
+    .jump-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-xs);
+      min-height: 44px;
+      padding: 0 var(--space-md);
+      background-color: transparent;
+      color: var(--on-primary);
+      border: 1px solid color-mix(in srgb, var(--outline) 65%, var(--primary));
+      border-radius: var(--rounded);
+      font-size: var(--label-size);
+      font-weight: 500;
+      cursor: pointer;
+      text-decoration: none;
+    }
+
+    .jump-btn:hover {
+      background-color: color-mix(in srgb, var(--on-primary) 12%, var(--primary));
+    }
+
+    .jump-btn.active {
+      border-color: var(--on-navy-brass);
+      background-color: color-mix(in srgb, var(--outline) 22%, var(--primary));
+    }
+
+    /* Main Page Grid */
+    .page-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: var(--space-xl);
+      padding: var(--space-xl) var(--space-lg) var(--space-2xl);
+      max-width: 1240px;
+      margin: 0 auto;
+    }
+    .page-grid * { min-width: 0; }
+
+    /* Section Headings (Charter Treatment #5) */
+    .section-block {
+      display: grid;
+      gap: var(--space-lg);
+    }
+
+    .section-head {
+      border-top: var(--brass-rule);
+      padding-top: var(--space-md);
+      border-bottom: var(--hairline);
+      padding-bottom: var(--space-sm);
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: var(--space-sm);
+    }
+
+    .section-head-main {
+      display: grid;
+      gap: var(--space-xs);
+    }
+
+    .section-index {
+      font-family: var(--font-label);
+      font-size: var(--label-size);
+      font-weight: 600;
+      color: var(--tertiary);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .section-head h2 {
+      font-family: var(--font-headline);
+      font-weight: 400;
+      font-size: var(--headline-size);
+      line-height: 1.25;
+      margin: 0;
+      color: var(--on-surface);
+    }
+
+    .section-subtitle {
+      margin: 0;
+      color: var(--on-surface-variant);
+      font-size: var(--body-size);
+      max-width: 68ch;
+    }
+
+    /* KPI Figure Cards (Charter Treatment #3 & #4) */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: var(--space-md);
+    }
+
+    .figure-card {
+      background-color: var(--surface-container-low);
+      border-top: var(--brass-rule);
+      box-shadow: var(--leaf-underline);
+      border-radius: var(--rounded-lg);
+      padding: var(--space-md) var(--space-lg);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: var(--space-sm);
+    }
+
+    .figure-label {
+      font-family: var(--font-label);
+      font-size: var(--label-size);
+      font-weight: 600;
+      color: var(--on-surface-variant);
+    }
+
+    .figure-value {
+      font-family: var(--font-headline);
+      font-weight: 400;
+      font-size: clamp(1.5rem, 1.2rem + 1vw, 2rem);
+      line-height: 1.15;
+      font-variant-numeric: tabular-nums lining-nums;
+      color: var(--on-surface);
+    }
+
+    .figure-delta {
+      font-size: var(--label-size);
+      font-weight: 600;
+      color: var(--tertiary);
+      display: flex;
+      align-items: center;
+      gap: var(--space-xs);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .figure-delta.is-positive { color: var(--positive); }
+    .figure-delta.is-negative { color: var(--error); }
+
+    .figure-note {
+      font-size: var(--label-size);
+      color: var(--on-surface-variant);
+      border-top: var(--hairline);
+      padding-top: var(--space-xs);
+    }
+
+    /* Asymmetric 2-Col Layouts */
+    .split-asymmetric {
+      display: grid;
+      grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+      gap: var(--space-lg);
+      align-items: start;
+    }
+
+    .split-asymmetric-reverse {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr);
+      gap: var(--space-lg);
+      align-items: start;
+    }
+
+    .leaf-panel {
+      background-color: var(--surface-container-low);
+      border-top: var(--brass-rule);
+      box-shadow: var(--leaf-underline);
+      border-radius: var(--rounded-lg);
+      padding: var(--space-lg);
+      display: grid;
+      gap: var(--space-md);
+    }
+
+    .panel-header {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: var(--space-sm);
+      border-bottom: var(--hairline);
+      padding-bottom: var(--space-sm);
+    }
+
+    .panel-title {
+      font-family: var(--font-headline);
+      font-weight: 700;
+      font-size: var(--subhead-size);
+      margin: 0;
+      color: var(--on-surface);
+    }
+
+    .panel-meta {
+      font-family: var(--font-label);
+      font-size: var(--label-size);
+      color: var(--on-surface-variant);
+    }
+
+    /* Chart containers with explicit min-height */
+    .chart-box {
+      position: relative;
+      width: 100%;
+      min-height: 290px;
+      height: 300px;
+    }
+
+    .chart-box-tall {
+      position: relative;
+      width: 100%;
+      min-height: 360px;
+      height: 380px;
+    }
+
+    .chart-box-compact {
+      position: relative;
+      width: 100%;
+      min-height: 210px;
+      height: 220px;
+    }
+
+    /* Paradox ticket-rate breakdown strip */
+    .paradox-strip {
+      display: grid;
+      gap: var(--space-sm);
+      background-color: var(--background);
+      border: var(--hairline);
+      padding: var(--space-md);
+      border-radius: var(--rounded);
+    }
+
+    .ratio-row {
+      display: grid;
+      gap: var(--space-xs);
+    }
+
+    .ratio-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: var(--label-size);
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .ratio-bar-track {
+      display: flex;
+      height: 18px;
+      width: 100%;
+      border-radius: var(--rounded);
+      overflow: hidden;
+      background-color: var(--surface-container-high);
+    }
+
+    .ratio-seg-paid {
+      background-color: var(--primary);
+      height: 100%;
+    }
+
+    .ratio-seg-free {
+      background-color: var(--data-context);
+      height: 100%;
+    }
+
+    /* Controls: Buttons, Segmented Toggles, Inputs */
+    .btn-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-sm);
+      align-items: center;
+    }
+
+    .btn-primary, .btn-secondary, .filter-tab {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--space-xs);
+      min-height: 44px;
+      padding: 0 var(--space-md);
+      border-radius: var(--rounded);
+      font-size: var(--label-size);
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .btn-primary {
+      background-color: var(--primary);
+      color: var(--on-primary);
+      border: var(--navy-outline);
+    }
+    .btn-primary:hover {
+      background-color: color-mix(in srgb, var(--primary) 85%, var(--on-surface));
+    }
+
+    .btn-secondary {
+      background-color: transparent;
+      color: var(--primary);
+      border: var(--navy-outline);
+    }
+    .btn-secondary:hover {
+      background-color: var(--primary-container);
+    }
+
+    .filter-tab {
+      background-color: var(--surface-container);
+      color: var(--on-surface);
+      border: var(--hairline);
+      min-height: 40px;
+      padding: 0 var(--space-sm);
+    }
+    .filter-tab:hover {
+      background-color: var(--surface-container-high);
+    }
+    .filter-tab.is-active {
+      background-color: var(--primary);
+      color: var(--on-primary);
+      border-color: var(--primary);
+    }
+
+    .tag-stamp {
+      display: inline-flex;
+      align-items: center;
+      border: var(--brass-outline);
+      color: var(--tertiary);
+      background-color: transparent;
+      border-radius: var(--rounded);
+      padding: var(--space-xs) var(--space-sm);
+      font-size: var(--label-size);
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    .tag-stamp.is-ticketed {
+      border-color: var(--primary);
+      color: var(--primary);
+      background-color: var(--primary-container);
+    }
+
+    .tag-stamp.is-positive {
+      border-color: var(--positive);
+      color: var(--positive);
+      background-color: var(--positive-wash);
+    }
+
+    /* Form Controls */
+    .filter-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-md);
+      align-items: end;
+      justify-content: space-between;
+      padding-bottom: var(--space-sm);
+      border-bottom: var(--hairline);
+    }
+
+    .field-group {
+      display: grid;
+      gap: var(--space-xs);
+    }
+
+    .field-label {
+      font-size: var(--label-size);
+      font-weight: 600;
+      color: var(--on-surface-variant);
+    }
+
+    .text-input {
+      min-height: 44px;
+      padding: var(--space-xs) var(--space-md);
+      background-color: var(--surface-container-low);
+      border: var(--hairline);
+      border-radius: var(--rounded);
+      color: var(--on-surface);
+      font-size: var(--body-size);
+      min-width: 220px;
+    }
+
+    .text-input:focus {
+      border-color: var(--primary);
+      outline: 2px solid var(--focus);
+      outline-offset: 1px;
+    }
+
+    /* Institutional Table */
+    .table-wrap {
+      width: 100%;
+      overflow-x: auto;
+    }
+
+    table.ledger-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: var(--label-size);
+      font-variant-numeric: tabular-nums;
+    }
+
+    table.ledger-table thead th {
+      background-color: var(--surface-container-high);
+      color: var(--on-surface);
+      font-weight: 600;
+      text-align: left;
+      padding: var(--space-sm) var(--space-md);
+      border-bottom: var(--brass-rule);
+      white-space: nowrap;
+    }
+
+    table.ledger-table thead th.num,
+    table.ledger-table tbody td.num,
+    table.ledger-table tfoot td.num {
+      text-align: right;
+    }
+
+    .sort-btn {
+      background: transparent;
+      border: none;
+      color: inherit;
+      font: inherit;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-xs);
+      padding: var(--space-xs) 0;
+      min-height: 36px;
+    }
+
+    table.ledger-table tbody tr {
+      border-bottom: var(--hairline);
+      cursor: pointer;
+    }
+
+    table.ledger-table tbody tr:hover {
+      background-color: var(--surface-container);
+    }
+
+    table.ledger-table tbody tr.is-selected {
+      background-color: var(--primary-container);
+    }
+
+    table.ledger-table tbody td {
+      padding: var(--space-sm) var(--space-md);
+      color: var(--on-surface);
+      vertical-align: middle;
+    }
+
+    table.ledger-table tfoot td {
+      padding: var(--space-sm) var(--space-md);
+      border-top: var(--brass-rule);
+      font-weight: 700;
+      background-color: var(--surface-container-low);
+    }
+
+    /* ML Feature Importance Commentary */
+    .insight-stack {
+      display: grid;
+      gap: var(--space-md);
+    }
+
+    .insight-card {
+      background-color: var(--surface-container-low);
+      border-top: var(--brass-rule);
+      box-shadow: var(--leaf-underline);
+      padding: var(--space-md);
+      border-radius: var(--rounded);
+      display: grid;
+      gap: var(--space-xs);
+    }
+
+    .insight-index {
+      font-family: var(--font-label);
+      font-size: var(--label-size);
+      font-weight: 600;
+      color: var(--tertiary);
+    }
+
+    .insight-title {
+      font-family: var(--font-headline);
+      font-weight: 700;
+      font-size: var(--subhead-size);
+      margin: 0;
+      color: var(--on-surface);
+    }
+
+    .insight-body {
+      margin: 0;
+      font-size: var(--body-size);
+      color: var(--on-surface-variant);
+    }
+
+    /* Simulator Workspace */
+    .simulator-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.05fr) minmax(0, 1.15fr);
+      gap: var(--space-lg);
+      align-items: start;
+    }
+
+    .scenario-list {
+      display: grid;
+      gap: var(--space-md);
+    }
+
+    .scenario-card {
+      background-color: var(--surface-container-low);
+      border-top: var(--brass-rule);
+      box-shadow: var(--leaf-underline);
+      border-radius: var(--rounded-lg);
+      padding: var(--space-md) var(--space-lg);
+      display: grid;
+      gap: var(--space-sm);
+    }
+
+    .scenario-card.is-disabled {
+      opacity: 0.68;
+      border-top-color: var(--outline-variant);
+    }
+
+    .scenario-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: var(--space-sm);
+      flex-wrap: wrap;
+    }
+
+    .scenario-toggle-label {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-sm);
+      cursor: pointer;
+      min-height: 44px;
+      font-weight: 700;
+      font-family: var(--font-headline);
+      font-size: var(--subhead-size);
+      color: var(--on-surface);
+    }
+
+    .scenario-toggle-label input[type="checkbox"] {
+      width: 20px;
+      height: 20px;
+      accent-color: var(--primary);
+      cursor: pointer;
+    }
+
+    .scenario-gain {
+      font-family: var(--font-headline);
+      font-size: var(--subhead-size);
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      color: var(--positive);
+    }
+
+    .control-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 96px;
+      gap: var(--space-md);
+      align-items: end;
+    }
+
+    .slider-wrap {
+      display: grid;
+      gap: var(--space-xs);
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--primary);
+      min-height: 36px;
+      cursor: pointer;
+    }
+
+    .num-input {
+      min-height: 44px;
+      padding: var(--space-xs) var(--space-sm);
+      background-color: var(--background);
+      border: var(--hairline);
+      border-radius: var(--rounded);
+      color: var(--on-surface);
+      font-size: var(--body-size);
+      font-variant-numeric: tabular-nums;
+      text-align: right;
+      width: 100%;
+    }
+
+    .milestone-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-xs);
+      align-items: center;
+    }
+
+    .milestone-btn {
+      min-height: 36px;
+      padding: 0 var(--space-sm);
+      background-color: var(--surface-container);
+      border: var(--hairline);
+      border-radius: var(--rounded);
+      color: var(--on-surface);
+      font-size: var(--label-size);
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .milestone-btn:hover {
+      background-color: var(--surface-container-high);
+    }
+
+    /* Projection Output Panel */
+    .projection-hero {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: var(--space-md);
+      background-color: var(--background);
+      border: var(--hairline);
+      padding: var(--space-md);
+      border-radius: var(--rounded);
+    }
+
+    .proj-metric {
+      display: grid;
+      gap: var(--space-xs);
+    }
+
+    .proj-value {
+      font-family: var(--font-headline);
+      font-size: clamp(1.5rem, 1.2rem + 1vw, 2.1rem);
+      font-variant-numeric: tabular-nums;
+      color: var(--primary);
+      line-height: 1.15;
+    }
+
+    .proj-sub {
+      font-size: var(--label-size);
+      font-weight: 600;
+      color: var(--positive);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .progress-track {
+      height: 12px;
+      width: 100%;
+      background-color: var(--surface-container-high);
+      border-radius: var(--rounded);
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background-color: var(--secondary);
+      transition: width var(--dur-short) var(--ease-out);
+    }
+
+    /* Strategy Playbook */
+    .strategy-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
+      gap: var(--space-md);
+    }
+
+    .strategy-card {
+      background-color: var(--surface-container-low);
+      border-top: var(--brass-rule);
+      box-shadow: var(--leaf-underline);
+      border-radius: var(--rounded-lg);
+      padding: var(--space-lg);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: var(--space-md);
+    }
+
+    .strategy-top {
+      display: grid;
+      gap: var(--space-sm);
+    }
+
+    .strategy-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: var(--space-xs);
+      flex-wrap: wrap;
+    }
+
+    .strategy-title {
+      font-family: var(--font-headline);
+      font-weight: 700;
+      font-size: var(--subhead-size);
+      margin: 0;
+      color: var(--on-surface);
+    }
+
+    .strategy-desc {
+      margin: 0;
+      color: var(--on-surface-variant);
+      font-size: var(--body-size);
+    }
+
+    .strategy-actions-list {
+      margin: 0;
+      padding-left: var(--space-md);
+      color: var(--on-surface);
+      font-size: var(--label-size);
+      display: grid;
+      gap: var(--space-xs);
+    }
+
+    .strategy-check-row {
+      border-top: var(--hairline);
+      padding-top: var(--space-sm);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-sm);
+    }
+
+    .check-label {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-sm);
+      min-height: 44px;
+      cursor: pointer;
+      font-size: var(--label-size);
+      font-weight: 600;
+      color: var(--primary);
+    }
+
+    .check-label input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--secondary);
+      cursor: pointer;
+    }
+
+    /* Status Message & Footer */
+    .status-toast {
+      font-size: var(--label-size);
+      font-weight: 600;
+      color: var(--positive);
+      min-height: 20px;
+    }
+
+    .footer-note {
+      border-top: var(--brass-rule);
+      padding-top: var(--space-md);
+      color: var(--on-surface-variant);
+      font-size: var(--label-size);
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: var(--space-md);
+    }
+
+    /* Responsive Breakpoints */
+    @media (max-width: 1024px) {
+      .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .split-asymmetric,
+      .split-asymmetric-reverse,
+      .simulator-grid { grid-template-columns: minmax(0, 1fr); }
+    }
+
+    @media (max-width: 640px) {
+      .title-band { padding: var(--space-lg) var(--space-md); }
+      .page-grid { padding: var(--space-lg) var(--space-md); gap: var(--space-lg); }
+      .kpi-grid { grid-template-columns: minmax(0, 1fr); }
+      .projection-hero { grid-template-columns: minmax(0, 1fr); }
+      .control-row { grid-template-columns: minmax(0, 1fr); }
+      .text-input { min-width: 0; width: 100%; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="title-band">
+    <div class="title-band-inner">
+      <div class="title-kicker-row">
+        <span class="title-kicker">114–115 年度營運簡報 · 淡水古蹟博物館經營團隊專屬儀表板</span>
+        <span class="scope-stamp">口徑基準：轄下 15 處場館（已全面排除理學堂大書院）</span>
+      </div>
+      <h1>人潮破紀錄卻見票房縮水：淡古營運悖論解析暨營收模擬平台</h1>
+      <p class="lede">
+        115 年 1–10 月淡古轄下 15 處場館累計吸引 2,941,822 人次（年增 +51.57%），三大收費景點亦成長 +22.50% 至 78.88 萬人次；然而付費購票率自 42.37% 滑落至 31.98%，使門票收入逆勢減收 7.58%（NT$ 20,179,360）。本系統結合場館結構剖析、隨機森林特徵權重與四項可調式情境模擬，協助團隊制定精準增收方案。
+      </p>
+      <nav class="jump-nav" aria-label="儀表板章節導覽">
+        <a class="jump-btn active" href="#sec-paradox" onclick="setActiveNav(this)">01 核心營運悖論</a>
+        <a class="jump-btn" href="#sec-venues" onclick="setActiveNav(this)">02 15 處場館矩陣</a>
+        <a class="jump-btn" href="#sec-ml" onclick="setActiveNav(this)">03 特徵重要性模型</a>
+        <a class="jump-btn" href="#sec-simulator" onclick="setActiveNav(this)">04 四大情境模擬器</a>
+        <a class="jump-btn" href="#sec-strategy" onclick="setActiveNav(this)">05 行動策略指南</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="page-grid">
+    <!-- SECTION 01: KPIs & Operating Paradox -->
+    <section id="sec-paradox" class="section-block">
+      <div class="section-head">
+        <div class="section-head-main">
+          <span class="section-index">SECTION 01 · 核心營運診斷</span>
+          <h2>營運總覽與「量增價減」結構悖論</h2>
+          <p class="section-subtitle">整合 114 年度同期基準與 115 年 1–10 月實績（15 處轄下場館合計，已剔除理學堂大書院 555,672 人次）。</p>
+        </div>
+      </div>
+
+      <div class="kpi-grid">
+        <article class="figure-card">
+          <div>
+            <div class="figure-label">15 館總參觀人次（115年 1–10月）</div>
+            <div class="figure-value">2,941,822</div>
+          </div>
+          <div class="figure-delta is-positive">▲ 年增 +51.57%（114年同期約 194.1 萬）</div>
+          <div class="figure-note">免費場館佔 73.19%（2,153,038 人次）</div>
+        </article>
+
+        <article class="figure-card">
+          <div>
+            <div class="figure-label">三大收費景點人次（紅毛城・小白宮・滬尾砲臺）</div>
+            <div class="figure-value">788,784</div>
+          </div>
+          <div class="figure-delta is-positive">▲ 年增 +22.50%（約 78.8 萬人次）</div>
+          <div class="figure-note">紅毛城單館 584,861 人，佔收費區 74.15%</div>
+        </article>
+
+        <article class="figure-card">
+          <div>
+            <div class="figure-label">115 年 1–10 月門票實收總額</div>
+            <div class="figure-value">NT$ 20,179,360</div>
+          </div>
+          <div class="figure-delta is-negative">▼ 年減 -7.58%（少收 NT$ 165.5 萬）</div>
+          <div class="figure-note">114 年同期推估 NT$ 21,834,480；實售 252,242 張</div>
+        </article>
+
+        <article class="figure-card">
+          <div>
+            <div class="figure-label">三大收費景點付費購票率</div>
+            <div class="figure-value">31.98%</div>
+          </div>
+          <div class="figure-delta is-negative">▼ 年減 -10.39 個百分點（114年為 42.37%）</div>
+          <div class="figure-note">免票／優惠入園佔比攀升至 68.02%</div>
+        </article>
+      </div>
+
+      <div class="split-asymmetric">
+        <div class="leaf-panel">
+          <div class="panel-header">
+            <h3 class="panel-title">115 年 1–10 月逐月參觀人潮走勢（15 館口徑）</h3>
+            <div class="btn-row" role="group" aria-label="逐月圖表日別切換">
+              <button type="button" class="filter-tab is-active" id="btn-month-all" onclick="setMonthlyDayMode('all')">全月合計</button>
+              <button type="button" class="filter-tab" id="btn-month-holiday" onclick="setMonthlyDayMode('holiday')">僅看假日</button>
+              <button type="button" class="filter-tab" id="btn-month-weekday" onclick="setMonthlyDayMode('weekday')">僅看平日</button>
+            </div>
+          </div>
+          <div class="chart-box">
+            <canvas id="monthlyTrendChart" aria-label="115年1至10月逐月收費與免費場館參觀人次折線與柱狀圖"></canvas>
+          </div>
+          <div class="panel-meta">
+            觀測重點：5 月受海關碼頭帶動創單月新高（449,084 人次）；7–8 月酷暑使收費場館明顯回落；10 月國慶檔期滬尾砲臺單月躍升至 25,550 人且日商中野宅開館（5,021 人）。
+          </div>
+        </div>
+
+        <div class="leaf-panel">
+          <div class="panel-header">
+            <h3 class="panel-title">核心悖論拆解：114 年 vs 115 年結構位移</h3>
+            <span class="panel-meta">變動幅度（%）</span>
+          </div>
+          <div class="chart-box-compact">
+            <canvas id="paradoxChart" aria-label="114與115年度人潮與門票收入變動對比圖"></canvas>
+          </div>
+          <div class="paradox-strip">
+            <div class="ratio-row">
+              <div class="ratio-labels">
+                <span>114 年度收費場館票種結構</span>
+                <span>付費 42.37% ／ 免票優惠 57.63%</span>
+              </div>
+              <div class="ratio-bar-track" aria-hidden="true">
+                <div class="ratio-seg-paid" style="width: 42.37%"></div>
+                <div class="ratio-seg-free" style="width: 57.63%"></div>
+              </div>
+            </div>
+            <div class="ratio-row">
+              <div class="ratio-labels">
+                <span>115 年 1–10 月收費場館票種結構</span>
+                <span>付費 31.98% ／ 免票優惠 68.02%</span>
+              </div>
+              <div class="ratio-bar-track" aria-hidden="true">
+                <div class="ratio-seg-paid" style="width: 31.98%"></div>
+                <div class="ratio-seg-free" style="width: 68.02%"></div>
+              </div>
+            </div>
+            <div class="panel-meta">
+              結論：若維持 114 年 42.37% 購票率，115 年 78.88 萬人次本應創造 NT$ 2,674 萬營收，結構稀釋導致實質流失 NT$ 656 萬潛在票房。
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 02: 15-Venue Explorer -->
+    <section id="sec-venues" class="section-block">
+      <div class="section-head">
+        <div class="section-head-main">
+          <span class="section-index">SECTION 02 · 場館矩陣探索</span>
+          <h2>轄下 15 處場館參觀結構與單館鑽研</h2>
+          <p class="section-subtitle">完整收錄 115 年 1–10 月淡古轄下 15 處場館實績（3 處收費場館、12 處免費場館），點擊任一場館列即可檢視該館逐月波動。</p>
+        </div>
+        <span class="tag-stamp">排除項目：理學堂大書院（555,672 人次已剔除）</span>
+      </div>
+
+      <div class="leaf-panel">
+        <div class="filter-bar">
+          <div class="btn-row" role="group" aria-label="場館收費屬性篩選">
+            <button type="button" class="filter-tab is-active" id="filter-cat-all" onclick="setVenueCategory('all')">全部 15 館</button>
+            <button type="button" class="filter-tab" id="filter-cat-ticketed" onclick="setVenueCategory('ticketed')">三大收費景點 (3)</button>
+            <button type="button" class="filter-tab" id="filter-cat-free" onclick="setVenueCategory('free')">免費文化場館 (12)</button>
+          </div>
+          <div class="field-group">
+            <label class="field-label" for="venue-search">搜尋場館名稱</label>
+            <input type="text" id="venue-search" class="text-input" placeholder="輸入場館關鍵字（如：紅毛城）" oninput="setVenueSearch(this.value)">
+          </div>
+        </div>
+
+        <div class="split-asymmetric-reverse">
+          <div style="display: grid; gap: var(--space-md);">
+            <div class="panel-header">
+              <h3 class="panel-title">場館累積人次排行（115年 1–10月）</h3>
+              <span class="panel-meta" id="venue-count-meta">顯示 15 處場館</span>
+            </div>
+            <div class="chart-box-tall">
+              <canvas id="venueRankChart" aria-label="淡古15處場館累計參觀人次橫條圖"></canvas>
+            </div>
+          </div>
+
+          <div style="display: grid; gap: var(--space-md);">
+            <div class="panel-header">
+              <h3 class="panel-title" id="drilldown-title">單館月別走勢：紅毛城</h3>
+              <span class="tag-stamp is-ticketed" id="drilldown-badge">收費景點 · 特徵權重 79.07%</span>
+            </div>
+            <div class="chart-box-compact">
+              <canvas id="venueDetailChart" aria-label="選定場館115年1至10月參觀人次走勢圖"></canvas>
+            </div>
+            <div class="paradox-strip" id="drilldown-summary">
+              <!-- Populated dynamically -->
+            </div>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table class="ledger-table">
+            <thead>
+              <tr>
+                <th>場館名稱</th>
+                <th>計費類別</th>
+                <th class="num"><button type="button" class="sort-btn" onclick="sortVenues('total')">1–10月總人次 <span id="sort-ind-total">▼</span></button></th>
+                <th class="num"><button type="button" class="sort-btn" onclick="sortVenues('share')">佔15館比重 <span id="sort-ind-share"></span></button></th>
+                <th class="num"><button type="button" class="sort-btn" onclick="sortVenues('holidayPct')">假日佔比 <span id="sort-ind-holidayPct"></span></button></th>
+                <th class="num"><button type="button" class="sort-btn" onclick="sortVenues('peak')">單月最高紀錄 <span id="sort-ind-peak"></span></button></th>
+                <th class="num"><button type="button" class="sort-btn" onclick="sortVenues('rfWeight')">模型權重 <span id="sort-ind-rfWeight"></span></button></th>
+              </tr>
+            </thead>
+            <tbody id="venue-table-body">
+              <!-- Populated dynamically -->
+            </tbody>
+            <tfoot id="venue-table-foot">
+              <!-- Populated dynamically -->
+            </tfoot>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 03: Machine Learning Feature Importance -->
+    <section id="sec-ml" class="section-block">
+      <div class="section-head">
+        <div class="section-head-main">
+          <span class="section-index">SECTION 03 · 機器學習迴歸與特徵歸因</span>
+          <h2>隨機森林特徵重要性：誰真正驅動淡古門票收入？</h2>
+          <p class="section-subtitle">經排除「理學堂大書院」後重新訓練隨機森林迴歸模型，前五大場館合佔 93.31% 營收解釋力，揭示關鍵的「跨館流量外溢」線索。</p>
+        </div>
+      </div>
+
+      <div class="split-asymmetric">
+        <div class="leaf-panel">
+          <div class="panel-header">
+            <h3 class="panel-title">門票收入驅動因子權重分佈（Random Forest）</h3>
+            <span class="panel-meta">總權重 100.00%（15 館模型）</span>
+          </div>
+          <div class="chart-box">
+            <canvas id="rfChart" aria-label="隨機森林模型門票收入特徵重要性分佈圖"></canvas>
+          </div>
+          <div class="panel-meta">
+            註：紅毛城（79.07%）與小白宮（2.98%）為收費場館；海關碼頭（4.97%）、多田榮吉故居（3.28%）、施家古厝（3.01%）均為免費場館，其人潮波動高度同步並領先預測整體售票收入。
+          </div>
+        </div>
+
+        <div class="insight-stack">
+          <article class="insight-card">
+            <span class="insight-index">01 · 絕對核心單核風險</span>
+            <h3 class="insight-title">紅毛城佔 79.07% 決定性權重</h3>
+            <p class="insight-body">
+              紅毛城不僅貢獻收費景點 74.15% 的人次，更掌握近八成的門票營收變異。任何影響紅毛城來客的因素（如 7–8 月日間酷暑跌破 4 萬人次、颱風閉館）皆會立即傳導至營收總額。
+            </p>
+          </article>
+
+          <article class="insight-card">
+            <span class="insight-index">02 · 免費場館的「影子驅動力」</span>
+            <h3 class="insight-title">海關碼頭（4.97%）+ 多田榮吉（3.28%）+ 施家古厝（3.01%）</h3>
+            <p class="insight-body">
+              三大免費節點合計權重達 <strong>11.26%</strong>，甚至高於收費館小白宮（2.98%）。反映河岸與老街人潮具備高度目的性外溢效應，但目前缺乏直接的「免費轉收費」動線設計，導致 215.3 萬免費人次未被有效轉化。
+            </p>
+          </article>
+
+          <article class="insight-card">
+            <span class="insight-index">03 · 小白宮聯動潛力</span>
+            <h3 class="insight-title">小白宮僅佔 2.98%，宜採「聯票打包」放大</h3>
+            <p class="insight-body">
+              小白宮全年累計 133,052 人次且平假日最均衡（假日 50.3% / 平日 49.7%），建議搭配海關碼頭與紅毛城推行「古蹟雙館／三館聯動集章與優惠券」，提高非免費客群順遊購票率。
+            </p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 04: Interactive 4-Scenario Revenue Optimization Simulator -->
+    <section id="sec-simulator" class="section-block">
+      <div class="section-head">
+        <div class="section-head-main">
+          <span class="section-index">SECTION 04 · 營運優化情境沙盤</span>
+          <h2>四項門票營收優化情境互動模擬器</h2>
+          <p class="section-subtitle">自由勾選並調整各政策情境參數，即時試算 115 年 1–10 月口徑下之營收增量、年增幅與 114 年度基準線追趕進度（設定將自動保存）。</p>
+        </div>
+      </div>
+
+      <div class="leaf-panel">
+        <div class="panel-header">
+          <h3 class="panel-title">快速載入政策情境組合</h3>
+          <div class="btn-row">
+            <button type="button" class="btn-secondary" onclick="applyPreset('baseline')">現況基準（無調整）</button>
+            <button type="button" class="btn-secondary" onclick="applyPreset('rate35')">僅優化付費率至 35%</button>
+            <button type="button" class="btn-secondary" onclick="applyPreset('rate114')">回升至 114 年 42.4%</button>
+            <button type="button" class="btn-secondary" onclick="applyPreset('balanced')">穩健並行方案</button>
+            <button type="button" class="btn-primary" onclick="applyPreset('max')">全策高標整合（+19.16M）</button>
+          </div>
+        </div>
+
+        <div class="simulator-grid">
+          <!-- Left: 4 Scenario Sliders & Toggles -->
+          <div class="scenario-list">
+            <!-- Scenario A -->
+            <div class="scenario-card" id="card-scen-a">
+              <div class="scenario-head">
+                <label class="scenario-toggle-label">
+                  <input type="checkbox" id="toggle-a" checked onchange="onToggleChange()">
+                  <span>情境 A｜付費購票率優化</span>
+                </label>
+                <span class="scenario-gain" id="gain-a">+NT$ 1,906,589</span>
+              </div>
+              <div class="control-row">
+                <div class="slider-wrap">
+                  <label class="field-label" for="slider-a">目標付費購票率（現況 31.98%，114 年基準 42.37%）</label>
+                  <input type="range" id="slider-a" min="31.98" max="45.00" step="0.01" value="35.00" oninput="syncAFromSlider(this.value)">
+                </div>
+                <div class="field-group">
+                  <label class="field-label" for="input-a">購票率 (%)</label>
+                  <input type="number" id="input-a" class="num-input" min="31.98" max="45.00" step="0.1" value="35.00" oninput="syncAFromNumber(this.value)">
+                </div>
+              </div>
+              <div class="milestone-row">
+                <span class="panel-meta">基準測試點：</span>
+                <button type="button" class="milestone-btn" onclick="setScenarioAValue(35.00)">目標 35.0% (+1.91M)</button>
+                <button type="button" class="milestone-btn" onclick="setScenarioAValue(42.37)">114年水準 42.4% (+6.56M)</button>
+              </div>
+            </div>
+
+            <!-- Scenario B -->
+            <div class="scenario-card" id="card-scen-b">
+              <div class="scenario-head">
+                <label class="scenario-toggle-label">
+                  <input type="checkbox" id="toggle-b" checked onchange="onToggleChange()">
+                  <span>情境 B｜夏季夜間開放（6–8 月）</span>
+                </label>
+                <span class="scenario-gain" id="gain-b">+NT$ 837,905</span>
+              </div>
+              <div class="control-row">
+                <div class="slider-wrap">
+                  <label class="field-label" for="slider-b">6–8 月核心收費場館夜間帶動購票成長率（%）</label>
+                  <input type="range" id="slider-b" min="0" max="50" step="1" value="25" oninput="syncBFromSlider(this.value)">
+                </div>
+                <div class="field-group">
+                  <label class="field-label" for="input-b">成長率 (%)</label>
+                  <input type="number" id="input-b" class="num-input" min="0" max="50" step="1" value="25" oninput="syncBFromNumber(this.value)">
+                </div>
+              </div>
+              <div class="milestone-row">
+                <span class="panel-meta">基準測試點：</span>
+                <button type="button" class="milestone-btn" onclick="setScenarioBValue(15)">溫和 +15% (+0.50M)</button>
+                <button type="button" class="milestone-btn" onclick="setScenarioBValue(25)">預設方案 +25% (+0.84M)</button>
+                <button type="button" class="milestone-btn" onclick="setScenarioBValue(35)">強化光影季 +35% (+1.17M)</button>
+              </div>
+            </div>
+
+            <!-- Scenario C -->
+            <div class="scenario-card" id="card-scen-c">
+              <div class="scenario-head">
+                <label class="scenario-toggle-label">
+                  <input type="checkbox" id="toggle-c" checked onchange="onToggleChange()">
+                  <span>情境 C｜差別票價（非新北市民／國際旅客）</span>
+                </label>
+                <span class="scenario-gain" id="gain-c">+NT$ 3,150,000</span>
+              </div>
+              <div class="control-row">
+                <div class="slider-wrap">
+                  <label class="field-label" for="slider-c">調整後全票票價（現行 NT$ 80；調至 NT$ 100 淨增 +NT$ 3.15M）</label>
+                  <input type="range" id="slider-c" min="80" max="120" step="5" value="100" oninput="syncCFromSlider(this.value)">
+                </div>
+                <div class="field-group">
+                  <label class="field-label" for="input-c">票價 (NT$)</label>
+                  <input type="number" id="input-c" class="num-input" min="80" max="120" step="5" value="100" oninput="syncCFromNumber(this.value)">
+                </div>
+              </div>
+              <div class="milestone-row">
+                <span class="panel-meta">基準參數：非市民適用與價格彈性淨留存率 62.44% ·</span>
+                <button type="button" class="milestone-btn" onclick="setScenarioCValue(100)">調至 NT$ 100 (+3.15M)</button>
+                <button type="button" class="milestone-btn" onclick="setScenarioCValue(120)">調至 NT$ 120 (+6.30M)</button>
+              </div>
+            </div>
+
+            <!-- Scenario D -->
+            <div class="scenario-card" id="card-scen-d">
+              <div class="scenario-head">
+                <label class="scenario-toggle-label">
+                  <input type="checkbox" id="toggle-d" checked onchange="onToggleChange()">
+                  <span>情境 D｜淡古免費場館導流轉化</span>
+                </label>
+                <span class="scenario-gain" id="gain-d">+NT$ 3,444,861</span>
+              </div>
+              <div class="control-row">
+                <div class="slider-wrap">
+                  <label class="field-label" for="slider-d">免費場館（2,153,038 人次）成功導流購票比例（%）</label>
+                  <input type="range" id="slider-d" min="0" max="8.0" step="0.5" value="2.0" oninput="syncDFromSlider(this.value)">
+                </div>
+                <div class="field-group">
+                  <label class="field-label" for="input-d">導流率 (%)</label>
+                  <input type="number" id="input-d" class="num-input" min="0" max="8.0" step="0.5" value="2.0" oninput="syncDFromNumber(this.value)">
+                </div>
+              </div>
+              <div class="milestone-row">
+                <span class="panel-meta">基準測試點：</span>
+                <button type="button" class="milestone-btn" onclick="setScenarioDValue(2.0)">導流 2% (+3.44M)</button>
+                <button type="button" class="milestone-btn" onclick="setScenarioDValue(5.0)">導流 5% (+8.61M)</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right: Live Projection Summary & Waterfall Chart -->
+          <div style="display: grid; gap: var(--space-md);">
+            <div class="projection-hero">
+              <div class="proj-metric">
+                <span class="figure-label">模擬優化後門票總收入（1–10月）</span>
+                <span class="proj-value" id="proj-total-rev">NT$ 29,518,715</span>
+                <span class="proj-sub" id="proj-vs-115">較 115 現況淨增 +NT$ 9,339,355（+46.28%）</span>
+              </div>
+              <div class="proj-metric">
+                <span class="figure-label">對比 114 年度同期基準（NT$ 21.83M）</span>
+                <span class="proj-value" id="proj-vs-114-val">+NT$ 7,684,235</span>
+                <span class="proj-sub" id="proj-vs-114-pct">達成率 135.19%（已成功填補 -165.5 萬缺口）</span>
+              </div>
+              <div style="grid-column: 1 / -1; display: grid; gap: var(--space-xs);">
+                <div class="ratio-labels">
+                  <span>追趕 114 年度同期營收門檻進度（NT$ 21,834,480）</span>
+                  <span id="proj-progress-label">135.2%</span>
+                </div>
+                <div class="progress-track" aria-hidden="true">
+                  <div class="progress-fill" id="proj-progress-bar" style="width: 100%"></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="panel-header">
+              <h3 class="panel-title">門票營收增益瀑布結構圖（單位：百萬元 NT$）</h3>
+              <span class="panel-meta">含 114 年基準對照線</span>
+            </div>
+            <div class="chart-box">
+              <canvas id="waterfallChart" aria-label="四項營運優化情境模擬營收瀑布圖"></canvas>
+            </div>
+
+            <div class="paradox-strip" id="sim-summary-box">
+              <!-- Populated dynamically -->
+            </div>
+
+            <div class="btn-row" style="justify-content: space-between;">
+              <span class="status-toast" id="sim-status-msg" role="status" aria-live="polite"></span>
+              <div class="btn-row">
+                <button type="button" class="btn-secondary" onclick="resetSimulator()">重設為預設值</button>
+                <button type="button" class="btn-primary" onclick="exportSimulationCsv()">匯出模擬與 15 館報表 (.csv)</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 05: Actionable Strategy Guide -->
+    <section id="sec-strategy" class="section-block">
+      <div class="section-head">
+        <div class="section-head-main">
+          <span class="section-index">SECTION 05 · 管理營運與文化行銷指南</span>
+          <h2>淡水古蹟博物館行動策略路線圖</h2>
+          <p class="section-subtitle">結合隨機森林權重與四項模擬成果，為經營團隊規劃可落地的營運優化與文化行銷行動方案（勾選採納狀態將持久儲存）。</p>
+        </div>
+        <div class="btn-row" role="group" aria-label="策略執行時程篩選">
+          <button type="button" class="filter-tab is-active" id="strat-all" onclick="setStrategyFilter('all')">全部策略 (5)</button>
+          <button type="button" class="filter-tab" id="strat-immediate" onclick="setStrategyFilter('immediate')">立即優化</button>
+          <button type="button" class="filter-tab" id="strat-seasonal" onclick="setStrategyFilter('seasonal')">檔期專案</button>
+          <button type="button" class="filter-tab" id="strat-structural" onclick="setStrategyFilter('structural')">跨館與定價機制</button>
+        </div>
+      </div>
+
+      <div class="strategy-grid" id="strategy-grid">
+        <!-- Populated dynamically -->
+      </div>
+    </section>
+
+    <footer class="footer-note">
+      <div>
+        <strong>資料來源與口徑說明</strong>：115 年 1–10 月各場館每日入館人數統計表（115年1-10月人數.csv）及 114 年度全年度營運比較資料。本儀表板已全面剔除「理學堂大書院」數據，嚴格以淡水古蹟博物館轄下 15 處場館為分析母體。
+      </div>
+      <div id="checklist-progress-summary">已標記優先推動策略：0 / 5 項</div>
+    </footer>
+  </main>
+
+  <api-shim></api-shim>
+  <script>
+    // =========================================================================
+    // 1. VERIFIED SOURCE DATA (15 Venues, Jan–Oct 115年, Excluding 理學堂大書院)
+    // =========================================================================
+    const MONTHS = [`1月`, `2月`, `3月`, `4月`, `5月`, `6月`, `7月`, `8月`, `9月`, `10月`];
+
+    const MONTHLY_HOLIDAY_EXCL = [132090, 254195, 118467, 128747, 289655, 138385, 92256, 106112, 177492, 224347];
+    const MONTHLY_WEEKDAY_EXCL = [138996, 91213, 136741, 134580, 159429, 126083, 138463, 115955, 100704, 137912];
+
+    const VENUES = [
+      {
+        id: `fort`,
+        name: `紅毛城`,
+        category: `ticketed`,
+        categoryLabel: `收費景點`,
+        monthly: [93763, 78775, 68988, 56707, 65729, 31567, 33262, 39315, 48158, 68597],
+        holiday: 314873,
+        weekday: 269988,
+        rfWeight: 79.07,
+        note: `全區絕對營收引擎，佔隨機森林特徵權重 79.07%。平日佔比達 46.16%（團客與校外教學密集），但 6–8 月高溫期間人次腰斬至 3.1–3.9 萬，為夏季夜間開放首選核心場域。`
+      },
+      {
+        id: `wharf`,
+        name: `海關碼頭`,
+        category: `free`,
+        categoryLabel: `免費場館`,
+        monthly: [81527, 156460, 108450, 141890, 293050, 175520, 143440, 124260, 148840, 173090],
+        holiday: 835995,
+        weekday: 710532,
+        rfWeight: 4.97,
+        note: `全區最大流量入口（154.65 萬人次，佔 15 館 52.57%），5 月受大型展演帶動單月飆破 29.3 萬。模型權重達 4.97%，為推動「免費場館導流至紅毛城購票」的最大漏斗基地。`
+      },
+      {
+        id: `shih`,
+        name: `施家古厝`,
+        category: `free`,
+        categoryLabel: `免費場館`,
+        monthly: [24207, 35852, 19600, 15947, 20989, 13692, 11121, 11616, 14315, 16514],
+        holiday: 128597,
+        weekday: 55256,
+        rfWeight: 3.01,
+        note: `老街區第二大免費古蹟（18.39 萬人次），假日集中度高達 69.95%，模型權重 3.01%（高於小白宮），具備強烈假日觀光散客轉換潛力。`
+      },
+      {
+        id: `lwh`,
+        name: `小白宮`,
+        category: `ticketed`,
+        categoryLabel: `收費景點`,
+        monthly: [17951, 14719, 14017, 12557, 16387, 8382, 8829, 9652, 13042, 17516],
+        holiday: 66923,
+        weekday: 66129,
+        rfWeight: 2.98,
+        note: `三大收費景點之一（13.31 萬人次），平假日最平均（假日 50.30%）。獨立特徵權重 2.98% 偏低，顯示可透過「紅毛城＋小白宮」婚紗攝影／建築導覽聯票強化單點貢獻。`
+      },
+      {
+        id: `tada`,
+        name: `多田榮吉故居`,
+        category: `free`,
+        categoryLabel: `免費場館`,
+        monthly: [18508, 17319, 14397, 12602, 14932, 7985, 7204, 9432, 13052, 16791],
+        holiday: 73161,
+        weekday: 59061,
+        rfWeight: 3.28,
+        note: `緊鄰小白宮與紅毛城山丘動線（13.22 萬人次），模型權重達 3.28% 位居第三，為串聯免費日式宅邸客群至付費古蹟園區的關鍵中繼站。`
+      },
+      {
+        id: `douglas`,
+        name: `得忌利士洋行`,
+        category: `free`,
+        categoryLabel: `免費場館`,
+        monthly: [12831, 16184, 10943, 4130, 11865, 10055, 9956, 10581, 16231, 17360],
+        holiday: 82995,
+        weekday: 37141,
+        rfWeight: 1.35,
+        note: `位於中正路與海關碼頭軸線（12.01 萬人次），假日佔 69.08%，適合作為淡水開港故事主題串聯與聯票銷售節點。`
+      },
+      {
+        id: `workshop`,
+        name: `藝術工坊`,
+        category: `free`,
+        categoryLabel: `免費場館`,
+        monthly: [7488, 10815, 6367, 6152, 9006, 5855, 5609, 5943, 11556, 12306],
+        holiday: 61220,
+        weekday: 19877,
+        rfWeight: 1.12,
+        note: `假日比例最高之主要場館（75.49%），9–10 月秋季展覽吸引人潮顯著回溫，適合結合文創商品與門票折抵券。`
+      },
+      {
+        id: `hobefort`,
+        name: `滬尾砲臺`,
+        category: `ticketed`,
+        categoryLabel: `收費景點`,
+        monthly: [4956, 5347, 4973, 5120, 6803, 4258, 4356, 4490, 5018, 25550],
+        holiday: 46483,
+        weekday: 24388,
+        rfWeight: 1.48,
+        note: `常態月均約 4,500–6,800 人，惟 10 月受國慶連假大型活動效應單月衝上 25,550 人（10/10–10/11 兩日即佔 19,000 人），驗證「節慶策展」可瞬間放大邊陲收費場館量能。`
+      },
+      {
+        id: `police`,
+        name: `警官宿舍`,
+        category: `free`,
+        categoryLabel: `免費場館`,
+        monthly: [3313, 3150, 2925, 3068, 3907, 3011, 2801, 2665, 3216, 3319],
+        holiday: 17716,
+        weekday: 13659,
+        rfWeight: 0.72,
+        note: `全年穩定維持月均約 3,100 人次（合計 31,375 人），位於老街山坡聚落，可納入「淡水日式建築散步護照」。`
+      },
+      {
+        id: `kinoshita`,
+        name: `木下靜涯舊居`,
+        category: `free`,
+        categoryLabel: `免費場館`,
+        monthly: [3490, 4103, 2444, 3044, 3436, 1988, 2578, 2310, 2960, 3824],
+        holiday: 17453,
+        weekday: 12724,
+        rfWeight: 0.68,
+        note: `鄰近紅毛城與淡水河景高地（30,177 人次），適合規劃藝術家手繪明信片集章活動引導順遊紅毛城。`
+      },
+      {
+        id: `auditorium`,
+        name: `小學校禮堂`,
+        category: `free`,
+        categoryLabel: `免費場館`,
+        monthly: [1565, 2377, 1434, 1694, 2212, 1652, 1281, 1556, 1420, 1547],
+        holiday: 9271,
+        weekday: 7467,
+        rfWeight: 0.45,
+        note: `累計 16,738 人次，2 月春節與 5 月活動月人潮較高，適合作為主題講座與親子手作據點。`
+      },
+      {
+        id: `cheng`,
+        name: `程氏古厝`,
+        category: `free`,
+        categoryLabel: `免費場館`,
+        monthly: [729, 307, 670, 416, 768, 503, 282, 247, 388, 824],
+        holiday: 3139,
+        weekday: 1995,
+        rfWeight: 0.31,
+        note: `滬尾休閒農業區閩南三合院（5,134 人次），適合與社區深度導覽及周末體驗工作坊結合。`
+      },
+      {
+        id: `nakano`,
+        name: `日商中野宅`,
+        category: `free`,
+        categoryLabel: `免費場館`,
+        monthly: [0, 0, 0, 0, 0, 0, 0, 0, 0, 5021],
+        holiday: 3314,
+        weekday: 1707,
+        rfWeight: 0.25,
+        note: `115 年 10 月新加入營運之生力軍，首月即吸納 5,021 人次（假日佔 66%），可即刻導入淡水古蹟通票優惠合作。`
+      },
+      {
+        id: `hushui3`,
+        name: `滬水一方 3F`,
+        category: `free`,
+        categoryLabel: `免費場館`,
+        monthly: [531, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        holiday: 446,
+        weekday: 85,
+        rfWeight: 0.08,
+        note: `僅於 115 年 1 月錄得參觀統計（531 人次，假日佔 83.99%），後續月份無開館數據。`
+      },
+      {
+        id: `hushui4`,
+        name: `滬水一方 4F`,
+        category: `free`,
+        categoryLabel: `免費場館`,
+        monthly: [227, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        holiday: 160,
+        weekday: 67,
+        rfWeight: 0.05,
+        note: `僅於 115 年 1 月錄得參觀統計（227 人次，假日佔 70.48%），後續月份無開館數據。`
+      }
+    ];
+
+    // Precompute venue derived fields
+    const TOTAL_15_VISITORS = VENUES.reduce((acc, v) => acc + v.monthly.reduce((a, b) => a + b, 0), 0); // 2,941,822
+    const TICKETED_VISITORS = VENUES.filter(v => v.category === `ticketed`).reduce((acc, v) => acc + v.monthly.reduce((a, b) => a + b, 0), 0); // 788,784
+    const FREE_VISITORS = TOTAL_15_VISITORS - TICKETED_VISITORS; // 2,153,038
+
+    VENUES.forEach(v => {
+      v.total = v.monthly.reduce((a, b) => a + b, 0);
+      v.share = (v.total / TOTAL_15_VISITORS) * 100;
+      v.holidayPct = v.total > 0 ? (v.holiday / v.total) * 100 : 0;
+      let maxVal = -1;
+      let maxIdx = 0;
+      v.monthly.forEach((m, i) => {
+        if (m > maxVal) { maxVal = m; maxIdx = i; }
+      });
+      v.peak = maxVal;
+      v.peakMonth = MONTHS[maxIdx];
+    });
+
+    // Baseline financial figures (115年 1–10月 vs 114年同期)
+    const BASELINE_REV_115 = 20179360;
+    const BASELINE_REV_114 = 21834480;
+    const BASELINE_PAID_RATE_115 = 31.97859; // 252,242 / 788,784
+    const BASELINE_PAID_TICKETS_115 = 252242;
+    const BASELINE_TICKET_PRICE = 80;
+    // 6–8月 核心收費場館 (紅毛城 + 小白宮) 人次 = 131,007 -> 131007 * 0.3197859 * 80 = NT$ 3,351,622 -> +25% = +NT$ 837,905 (~0.84M)
+    const SUMMER_CORE_VISITORS = 131007;
+    // 差別票價：現行 252,242 付費張數，扣除新北市民留存／價格彈性折減後，淨適用基數約 62.44% (157,500 張)，調漲 NT$ 20 -> +NT$ 3.15M
+    const DIFF_PRICE_NET_SHARE = 0.6244;
+
+    const STRATEGIES = [
+      {
+        id: `s1`,
+        horizon: `immediate`,
+        horizonLabel: `立即優化`,
+        scenarioTag: `對應情境 A · 目標 +NT$ 1.91M～6.56M`,
+        title: `免票客群精準轉換與優惠核銷優化`,
+        desc: `針對佔比攀升至 68.02% 的免票與優惠客群進行分層經營，補回較 114 年流失的 10.39 個百分點購票率。`,
+        bullets: [
+          `重新盤點團體免票申請與身障／敬老陪同核銷流程，降低非必要溢免比例`,
+          `於紅毛城售票口推行「免票入園加購 NT$ 50 特展語音導覽／限定紀念票根」`,
+          `結合在地旅宿推出「住淡水贈小白宮優待券」，提升非市民全票曝光`
+        ]
+      },
+      {
+        id: `s2`,
+        horizon: `seasonal`,
+        horizonLabel: `檔期專案`,
+        scenarioTag: `對應情境 B · 目標 +NT$ 0.84M`,
+        title: `「仲夏夜古蹟光影季」夏季夜間延長開放`,
+        desc: `破解 6–8 月日間酷暑造成紅毛城、小白宮人潮腰斬的季節痛點，將參觀時段延伸至涼爽夜間。`,
+        bullets: [
+          `6–8 月每週五至週日延長紅毛城、小白宮開放至 21:00`,
+          `打造夜間建築光雕與河畔夏夜草地導覽，推出「星光限定全票」`,
+          `預期帶動夏季核心場館購票量成長 +25%，直接補齊淡季營收低谷`
+        ]
+      },
+      {
+        id: `s3`,
+        horizon: `structural`,
+        horizonLabel: `跨館與定價機制`,
+        scenarioTag: `對應情境 C · 目標 +NT$ 3.15M`,
+        title: `非新北市民／國際旅客差別定價與數位套票`,
+        desc: `落實市民文化平權的同時，對非新北市民與國際觀光客建立符合國際古蹟價值的差別票價結構。`,
+        bullets: [
+          `維持新北市民免費與法定優惠不變，非市民與外籍旅客全票調整至 NT$ 100`,
+          `於 Klook、KKday 與北北基好玩卡上架「NT$ 120 古蹟＋渡輪／茶飲聯票」緩衝漲幅體感`,
+          `在維持 62.4% 有效適用與彈性留存下，單項政策即可創造 +NT$ 315 萬淨增收`
+        ]
+      },
+      {
+        id: `s4`,
+        horizon: `structural`,
+        horizonLabel: `跨館與定價機制`,
+        scenarioTag: `對應情境 D · 目標 +NT$ 3.44M～8.61M`,
+        title: `海關碼頭・多田榮吉・施家古厝免費流量導流漏斗`,
+        desc: `運用隨機森林模型揭示的 11.26% 免費館影子驅動力，把 215.3 萬免費遊客精準導入三大收費景點。`,
+        bullets: [
+          `於海關碼頭（154.6 萬人）設立「古蹟集章起點站」，憑 2 枚免費館印章享紅毛城快速通關或文創禮`,
+          `串聯多田榮吉故居與小白宮山坡步道指標，設置 AR 故事導引與假日接駁微巴`,
+          `僅需成功轉化 2% 免費人潮即增收 +344 萬；達 5% 轉化更可貢獻 +861 萬`
+        ]
+      },
+      {
+        id: `s5`,
+        horizon: `seasonal`,
+        horizonLabel: `檔期專案`,
+        scenarioTag: `分散紅毛城 79.07% 單核依賴風險`,
+        title: `節慶型場館聯動與新館（日商中野宅）動能串聯`,
+        desc: `複製 10 月國慶連假滬尾砲臺單月衝上 2.55 萬人的策展模式，並將新開館日商中野宅納入通票體系。`,
+        bullets: [
+          `將大型市集與夜間燈會安排於海關碼頭及滬尾砲臺，並附贈「紅毛城／小白宮 48 小時優惠券」`,
+          `針對 10 月新開幕的日商中野宅（首月 5,021 人）規劃日式建築群聯票導流`,
+          `平衡平日團客與假日散客佔比，強化整體場館組合抗風險韌性`
+        ]
+      }
+    ];
+
+    // =========================================================================
+    // 2. APPLICATION STATE & PERSISTENCE
+    // =========================================================================
+    const DEFAULT_STATE = {
+      monthlyDayMode: `all`,
+      venueCategory: `all`,
+      venueSearch: ``,
+      sortKey: `total`,
+      sortDir: `desc`,
+      selectedVenueId: `fort`,
+      strategyFilter: `all`,
+      checkedStrategies: [],
+      sim: {
+        enabledA: true, rateA: 35.00,
+        enabledB: true, liftB: 25,
+        enabledC: true, priceC: 100,
+        enabledD: true, convD: 2.0
+      }
+    };
+
+    let appState = JSON.parse(JSON.stringify(DEFAULT_STATE));
+
+    // Chart instances
+    let monthlyChart = null;
+    let paradoxChart = null;
+    let venueRankChart = null;
+    let venueDetailChart = null;
+    let rfChart = null;
+    let waterfallChart = null;
+
+    // Read CSS tokens for Chart.js so no inline hex lives outside :root
+    function getCssToken(name) {
+      return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    }
+
+    function formatInt(n) {
+      return Math.round(n).toLocaleString(`zh-TW`);
+    }
+
+    function formatCurrency(n) {
+      const sign = n < 0 ? `-` : ``;
+      return `${sign}NT$ ${Math.round(Math.abs(n)).toLocaleString(`zh-TW`)}`;
+    }
+
+    function formatMillions(n) {
+      const sign = n > 0 ? `+` : (n < 0 ? `-` : ``);
+      return `${sign}NT$ ${(Math.abs(n) / 1000000).toFixed(2)}M`;
+    }
+
+    async function persistState() {
+      try {
+        if (window.notebookAppApi && typeof window.notebookAppApi.setAppState === `function`) {
+          await window.notebookAppApi.setAppState(appState);
+        }
+      } catch (err) {
+        // Ignore persistence errors silently in offline preview
+      }
+    }
+
+    // =========================================================================
+    // 3. SECTION 01: MONTHLY TREND & PARADOX CHARTS
+    // =========================================================================
+    function setActiveNav(el) {
+      document.querySelectorAll(`.jump-btn`).forEach(b => b.classList.remove(`active`));
+      if (el) el.classList.add(`active`);
+    }
+
+    function setMonthlyDayMode(mode) {
+      appState.monthlyDayMode = mode;
+      [`all`, `holiday`, `weekday`].forEach(m => {
+        const btn = document.getElementById(`btn-month-${m}`);
+        if (btn) btn.classList.toggle(`is-active`, m === mode);
+      });
+      renderMonthlyChart();
+      persistState();
+    }
+
+    function renderMonthlyChart() {
+      const canvas = document.getElementById(`monthlyTrendChart`);
+      if (!canvas || typeof Chart === `undefined`) return;
+
+      const ticketedSeries = MONTHS.map((_, idx) => {
+        const sumTicketed = VENUES.filter(v => v.category === `ticketed`).reduce((acc, v) => acc + v.monthly[idx], 0);
+        if (appState.monthlyDayMode === `all`) return sumTicketed;
+        // Pro-rate holiday/weekday ratio from monthly aggregate excluding 理學堂
+        const monthTotal = MONTHLY_HOLIDAY_EXCL[idx] + MONTHLY_WEEKDAY_EXCL[idx];
+        const ratio = appState.monthlyDayMode === `holiday`
+          ? (MONTHLY_HOLIDAY_EXCL[idx] / monthTotal)
+          : (MONTHLY_WEEKDAY_EXCL[idx] / monthTotal);
+        return Math.round(sumTicketed * ratio);
+      });
+
+      const freeSeries = MONTHS.map((_, idx) => {
+        const sumFree = VENUES.filter(v => v.category === `free`).reduce((acc, v) => acc + v.monthly[idx], 0);
+        if (appState.monthlyDayMode === `all`) return sumFree;
+        const monthTotal = MONTHLY_HOLIDAY_EXCL[idx] + MONTHLY_WEEKDAY_EXCL[idx];
+        const ratio = appState.monthlyDayMode === `holiday`
+          ? (MONTHLY_HOLIDAY_EXCL[idx] / monthTotal)
+          : (MONTHLY_WEEKDAY_EXCL[idx] / monthTotal);
+        return Math.round(sumFree * ratio);
+      });
+
+      const navy = getCssToken(`--data-1`);
+      const brass = getCssToken(`--data-2`);
+      const gridColor = getCssToken(`--outline-variant`);
+      const ink = getCssToken(`--on-surface`);
+
+      if (monthlyChart) monthlyChart.destroy();
+      monthlyChart = new Chart(canvas, {
+        type: `bar`,
+        data: {
+          labels: MONTHS,
+          datasets: [
+            {
+              label: `三大收費景點`,
+              data: ticketedSeries,
+              backgroundColor: navy,
+              borderRadius: 2
+            },
+            {
+              label: `12 處免費場館`,
+              data: freeSeries,
+              backgroundColor: brass,
+              borderRadius: 2
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: `index`, intersect: false },
+          plugins: {
+            legend: {
+              position: `top`,
+              align: `end`,
+              labels: { color: ink, boxWidth: 12, usePointStyle: false }
+            },
+            tooltip: {
+              callbacks: {
+                footer: function(items) {
+                  const total = items.reduce((sum, it) => sum + it.parsed.y, 0);
+                  return `15 館合計：${formatInt(total)} 人次`;
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              stacked: true,
+              grid: { display: false },
+              ticks: { color: ink }
+            },
+            y: {
+              stacked: true,
+              grid: { color: gridColor },
+              ticks: {
+                color: ink,
+                callback: function(val) { return `${Math.round(val / 1000)}k`; }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    function renderParadoxChart() {
+      const canvas = document.getElementById(`paradoxChart`);
+      if (!canvas || typeof Chart === `undefined`) return;
+
+      const positiveCol = getCssToken(`--data-3`);
+      const negativeCol = getCssToken(`--data-5`);
+      const gridColor = getCssToken(`--outline-variant`);
+      const ink = getCssToken(`--on-surface`);
+
+      if (paradoxChart) paradoxChart.destroy();
+      paradoxChart = new Chart(canvas, {
+        type: `bar`,
+        data: {
+          labels: [`15 館總人次`, `三大收費人次`, `門票總收入`, `付費購票率`],
+          datasets: [{
+            label: `115 年較 114 年同期變動`,
+            data: [51.57, 22.50, -7.58, -10.39],
+            backgroundColor: [positiveCol, positiveCol, negativeCol, negativeCol],
+            borderRadius: 2
+          }]
+        },
+        options: {
+          indexAxis: `y`,
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: function(ctx) {
+                  const v = ctx.parsed.x;
+                  const unit = ctx.dataIndex === 3 ? ` 個百分點` : `%`;
+                  return `${v > 0 ? `+` : ``}${v}${unit}`;
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: { color: gridColor },
+              ticks: {
+                color: ink,
+                callback: function(val) { return `${val > 0 ? `+` : ``}${val}%`; }
+              }
+            },
+            y: {
+              grid: { display: false },
+              ticks: { color: ink }
+            }
+          }
+        }
+      });
+    }
+
+    // =========================================================================
+    // 4. SECTION 02: 15-VENUE EXPLORER, RANKING, TABLE & DRILLDOWN
+    // =========================================================================
+    function getFilteredVenues() {
+      const q = (appState.venueSearch || ``).trim();
+      return VENUES.filter(v => {
+        if (appState.venueCategory !== `all` && v.category !== appState.venueCategory) return false;
+        if (q && !v.name.includes(q)) return false;
+        return true;
+      }).sort((a, b) => {
+        const key = appState.sortKey;
+        const mul = appState.sortDir === `asc` ? 1 : -1;
+        return (a[key] - b[key]) * mul;
+      });
+    }
+
+    function setVenueCategory(cat) {
+      appState.venueCategory = cat;
+      [`all`, `ticketed`, `free`].forEach(c => {
+        const btn = document.getElementById(`filter-cat-${c}`);
+        if (btn) btn.classList.toggle(`is-active`, c === cat);
+      });
+      renderVenueSection();
+      persistState();
+    }
+
+    function setVenueSearch(val) {
+      appState.venueSearch = val;
+      renderVenueSection();
+      persistState();
+    }
+
+    function sortVenues(key) {
+      if (appState.sortKey === key) {
+        appState.sortDir = appState.sortDir === `desc` ? `asc` : `desc`;
+      } else {
+        appState.sortKey = key;
+        appState.sortDir = `desc`;
+      }
+      renderVenueSection();
+      persistState();
+    }
+
+    function selectVenue(venueId) {
+      appState.selectedVenueId = venueId;
+      renderVenueTable();
+      renderVenueDrilldown();
+      persistState();
+    }
+
+    function renderVenueSection() {
+      renderVenueRankChart();
+      renderVenueTable();
+      renderVenueDrilldown();
+    }
+
+    function renderVenueRankChart() {
+      const canvas = document.getElementById(`venueRankChart`);
+      const countMeta = document.getElementById(`venue-count-meta`);
+      const list = getFilteredVenues();
+      if (countMeta) countMeta.textContent = `顯示 ${list.length} 處場館`;
+      if (!canvas || typeof Chart === `undefined`) return;
+
+      const navy = getCssToken(`--data-1`);
+      const green = getCssToken(`--data-3`);
+      const gridColor = getCssToken(`--outline-variant`);
+      const ink = getCssToken(`--on-surface`);
+
+      if (venueRankChart) venueRankChart.destroy();
+      venueRankChart = new Chart(canvas, {
+        type: `bar`,
+        data: {
+          labels: list.map(v => v.name),
+          datasets: [{
+            label: `1–10月累積人次`,
+            data: list.map(v => v.total),
+            backgroundColor: list.map(v => v.category === `ticketed` ? navy : green),
+            borderRadius: 2
+          }]
+        },
+        options: {
+          indexAxis: `y`,
+          responsive: true,
+          maintainAspectRatio: false,
+          onClick: function(_, elems) {
+            if (elems && elems.length > 0) {
+              const v = list[elems[0].index];
+              if (v) selectVenue(v.id);
+            }
+          },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: function(ctx) {
+                  const v = list[ctx.dataIndex];
+                  return `${formatInt(v.total)} 人次（佔 ${v.share.toFixed(2)}%）`;
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: { color: gridColor },
+              ticks: {
+                color: ink,
+                callback: function(val) {
+                  return val >= 1000000 ? `${(val / 1000000).toFixed(1)}M` : `${Math.round(val / 1000)}k`;
+                }
+              }
+            },
+            y: {
+              grid: { display: false },
+              ticks: { color: ink }
+            }
+          }
+        }
+      });
+    }
+
+    function renderVenueTable() {
+      const tbody = document.getElementById(`venue-table-body`);
+      const tfoot = document.getElementById(`venue-table-foot`);
+      if (!tbody || !tfoot) return;
+
+      [`total`, `share`, `holidayPct`, `peak`, `rfWeight`].forEach(k => {
+        const ind = document.getElementById(`sort-ind-${k}`);
+        if (ind) {
+          ind.textContent = appState.sortKey === k ? (appState.sortDir === `desc` ? `▼` : `▲`) : ``;
+        }
+      });
+
+      const list = getFilteredVenues();
+      if (list.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7">查無符合「${appState.venueSearch}」之場館，請清除搜尋關鍵字或切換篩選類別。</td></tr>`;
+        tfoot.innerHTML = ``;
+        return;
+      }
+
+      tbody.innerHTML = list.map(v => {
+        const selClass = v.id === appState.selectedVenueId ? `is-selected` : ``;
+        const badgeClass = v.category === `ticketed` ? `tag-stamp is-ticketed` : `tag-stamp is-positive`;
+        return `
+          <tr class="${selClass}" onclick="selectVenue('${v.id}')">
+            <td><strong>${v.name}</strong></td>
+            <td><span class="${badgeClass}">${v.categoryLabel}</span></td>
+            <td class="num">${formatInt(v.total)}</td>
+            <td class="num">${v.share.toFixed(2)}%</td>
+            <td class="num">${v.holidayPct.toFixed(1)}%</td>
+            <td class="num">${formatInt(v.peak)}（${v.peakMonth}）</td>
+            <td class="num">${v.rfWeight.toFixed(2)}%</td>
+          </tr>
+        `;
+      }).join(``);
+
+      const sumTotal = list.reduce((a, v) => a + v.total, 0);
+      const sumShare = list.reduce((a, v) => a + v.share, 0);
+      const sumHoliday = list.reduce((a, v) => a + v.holiday, 0);
+      const sumHolidayPct = sumTotal > 0 ? (sumHoliday / sumTotal) * 100 : 0;
+      const sumRf = list.reduce((a, v) => a + v.rfWeight, 0);
+
+      tfoot.innerHTML = `
+        <tr>
+          <td>篩選小計（${list.length} 館）</td>
+          <td>—</td>
+          <td class="num">${formatInt(sumTotal)}</td>
+          <td class="num">${sumShare.toFixed(2)}%</td>
+          <td class="num">${sumHolidayPct.toFixed(1)}%</td>
+          <td class="num">—</td>
+          <td class="num">${sumRf.toFixed(2)}%</td>
+        </tr>
+      `;
+    }
+
+    function renderVenueDrilldown() {
+      const venue = VENUES.find(v => v.id === appState.selectedVenueId) || VENUES[0];
+      const titleEl = document.getElementById(`drilldown-title`);
+      const badgeEl = document.getElementById(`drilldown-badge`);
+      const summaryEl = document.getElementById(`drilldown-summary`);
+      const canvas = document.getElementById(`venueDetailChart`);
+
+      if (titleEl) titleEl.textContent = `單館月別走勢：${venue.name}`;
+      if (badgeEl) {
+        badgeEl.textContent = `${venue.categoryLabel} · 模型權重 ${venue.rfWeight.toFixed(2)}%`;
+        badgeEl.className = venue.category === `ticketed` ? `tag-stamp is-ticketed` : `tag-stamp is-positive`;
+      }
+      if (summaryEl) {
+        summaryEl.innerHTML = `
+          <div class="ratio-labels">
+            <span>累計 ${formatInt(venue.total)} 人次（假日 ${formatInt(venue.holiday)} ／ 平日 ${formatInt(venue.weekday)}）</span>
+            <span>單月最高 ${formatInt(venue.peak)}（${venue.peakMonth}）</span>
+          </div>
+          <div class="panel-meta">${venue.note}</div>
+        `;
+      }
+
+      if (!canvas || typeof Chart === `undefined`) return;
+      const lineColor = venue.category === `ticketed` ? getCssToken(`--data-1`) : getCssToken(`--data-3`);
+      const gridColor = getCssToken(`--outline-variant`);
+      const ink = getCssToken(`--on-surface`);
+
+      if (venueDetailChart) venueDetailChart.destroy();
+      venueDetailChart = new Chart(canvas, {
+        type: `line`,
+        data: {
+          labels: MONTHS,
+          datasets: [{
+            label: `${venue.name}月參觀人次`,
+            data: venue.monthly,
+            borderColor: lineColor,
+            backgroundColor: lineColor,
+            borderWidth: 2,
+            pointRadius: 3,
+            tension: 0.15
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { display: false }, ticks: { color: ink } },
+            y: {
+              grid: { color: gridColor },
+              ticks: {
+                color: ink,
+                callback: function(val) {
+                  return val >= 1000 ? `${Math.round(val / 1000)}k` : val;
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // =========================================================================
+    // 5. SECTION 03: RANDOM FOREST FEATURE IMPORTANCE CHART
+    // =========================================================================
+    function renderRfChart() {
+      const canvas = document.getElementById(`rfChart`);
+      if (!canvas || typeof Chart === `undefined`) return;
+
+      const navy = getCssToken(`--data-1`);
+      const green = getCssToken(`--data-3`);
+      const brass = getCssToken(`--data-2`);
+      const ctxGray = getCssToken(`--data-context`);
+      const gridColor = getCssToken(`--outline-variant`);
+      const ink = getCssToken(`--on-surface`);
+
+      if (rfChart) rfChart.destroy();
+      rfChart = new Chart(canvas, {
+        type: `bar`,
+        data: {
+          labels: [
+            `紅毛城（收費）`,
+            `海關碼頭（免費）`,
+            `多田榮吉故居（免費）`,
+            `施家古厝（免費）`,
+            `小白宮（收費）`,
+            `其餘 10 處場館合計`
+          ],
+          datasets: [{
+            label: `特徵權重 (%)`,
+            data: [79.07, 4.97, 3.28, 3.01, 2.98, 6.69],
+            backgroundColor: [navy, green, green, green, brass, ctxGray],
+            borderRadius: 2
+          }]
+        },
+        options: {
+          indexAxis: `y`,
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: function(ctx) {
+                  return `模型特徵權重：${ctx.parsed.x}%`;
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              max: 85,
+              grid: { color: gridColor },
+              ticks: {
+                color: ink,
+                callback: function(val) { return `${val}%`; }
+              }
+            },
+            y: {
+              grid: { display: false },
+              ticks: { color: ink }
+            }
+          }
+        }
+      });
+    }
+
+    // =========================================================================
+    // 6. SECTION 04: 4-SCENARIO REVENUE OPTIMIZATION SIMULATOR
+    // =========================================================================
+    function computeSimulation() {
+      const s = appState.sim;
+      const gainA = s.enabledA
+        ? Math.max(0, TICKETED_VISITORS * ((s.rateA - BASELINE_PAID_RATE_115) / 100) * BASELINE_TICKET_PRICE)
+        : 0;
+      const gainB = s.enabledB
+        ? Math.max(0, SUMMER_CORE_VISITORS * (BASELINE_PAID_RATE_115 / 100) * BASELINE_TICKET_PRICE * (s.liftB / 100))
+        : 0;
+      const gainC = s.enabledC
+        ? Math.max(0, BASELINE_PAID_TICKETS_115 * (s.priceC - BASELINE_TICKET_PRICE) * DIFF_PRICE_NET_SHARE)
+        : 0;
+      const gainD = s.enabledD
+        ? Math.max(0, FREE_VISITORS * (s.convD / 100) * BASELINE_TICKET_PRICE)
+        : 0;
+
+      const totalGain = gainA + gainB + gainC + gainD;
+      const projected = BASELINE_REV_115 + totalGain;
+      return { gainA, gainB, gainC, gainD, totalGain, projected };
+    }
+
+    function syncSimDomFromState() {
+      const s = appState.sim;
+      const mapChecks = [
+        [`toggle-a`, s.enabledA, `card-scen-a`],
+        [`toggle-b`, s.enabledB, `card-scen-b`],
+        [`toggle-c`, s.enabledC, `card-scen-c`],
+        [`toggle-d`, s.enabledD, `card-scen-d`]
+      ];
+      mapChecks.forEach(([id, val, cardId]) => {
+        const el = document.getElementById(id);
+        const card = document.getElementById(cardId);
+        if (el) el.checked = val;
+        if (card) card.classList.toggle(`is-disabled`, !val);
+      });
+
+      const pairs = [
+        [`slider-a`, `input-a`, s.rateA.toFixed(2)],
+        [`slider-b`, `input-b`, s.liftB],
+        [`slider-c`, `input-c`, s.priceC],
+        [`slider-d`, `input-d`, s.convD.toFixed(1)]
+      ];
+      pairs.forEach(([slId, inId, val]) => {
+        const sl = document.getElementById(slId);
+        const inp = document.getElementById(inId);
+        if (sl) sl.value = val;
+        if (inp) inp.value = val;
+      });
+    }
+
+    function updateSimulator() {
+      syncSimDomFromState();
+      const res = computeSimulation();
+
+      const setTxt = (id, txt) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = txt;
+      };
+
+      setTxt(`gain-a`, `+${formatCurrency(res.gainA)}`);
+      setTxt(`gain-b`, `+${formatCurrency(res.gainB)}`);
+      setTxt(`gain-c`, `+${formatCurrency(res.gainC)}`);
+      setTxt(`gain-d`, `+${formatCurrency(res.gainD)}`);
+
+      setTxt(`proj-total-rev`, formatCurrency(res.projected));
+      const pctVs115 = (res.totalGain / BASELINE_REV_115) * 100;
+      setTxt(`proj-vs-115`, `較 115 現況淨增 +${formatCurrency(res.totalGain)}（+${pctVs115.toFixed(2)}%）`);
+
+      const diff114 = res.projected - BASELINE_REV_114;
+      const pct114 = (res.projected / BASELINE_REV_114) * 100;
+      const el114Val = document.getElementById(`proj-vs-114-val`);
+      const el114Pct = document.getElementById(`proj-vs-114-pct`);
+      if (el114Val) {
+        el114Val.textContent = `${diff114 >= 0 ? `+` : ``}${formatCurrency(diff114)}`;
+        el114Val.style.color = diff114 >= 0 ? getCssToken(`--positive`) : getCssToken(`--error`);
+      }
+      if (el114Pct) {
+        el114Pct.textContent = diff114 >= 0
+          ? `達成率 ${pct114.toFixed(2)}%（已成功彌補 114 年缺口並淨超額）`
+          : `達成率 ${pct114.toFixed(2)}%（距 114 年同期基準仍差 ${formatCurrency(Math.abs(diff114))}）`;
+        el114Pct.style.color = diff114 >= 0 ? getCssToken(`--positive`) : getCssToken(`--error`);
+      }
+
+      setTxt(`proj-progress-label`, `${pct114.toFixed(1)}%`);
+      const bar = document.getElementById(`proj-progress-bar`);
+      if (bar) {
+        bar.style.width = `${Math.min(100, Math.max(0, pct114))}%`;
+        bar.style.backgroundColor = diff114 >= 0 ? getCssToken(`--secondary`) : getCssToken(`--warning`);
+      }
+
+      const simSummary = document.getElementById(`sim-summary-box`);
+      if (simSummary) {
+        const extraTicketsD = Math.round(FREE_VISITORS * (appState.sim.enabledD ? appState.sim.convD / 100 : 0));
+        const extraTicketsA = Math.round(TICKETED_VISITORS * (appState.sim.enabledA ? (appState.sim.rateA - BASELINE_PAID_RATE_115) / 100 : 0));
+        simSummary.innerHTML = `
+          <div class="ratio-labels">
+            <span>模擬估算新增付費張數：+${formatInt(extraTicketsA + extraTicketsD)} 張（情境 A + D）</span>
+            <span>合計增益：${formatMillions(res.totalGain)}</span>
+          </div>
+          <div class="panel-meta">
+            結構佔比：情境 A ${res.totalGain > 0 ? ((res.gainA / res.totalGain) * 100).toFixed(1) : `0.0`}% · 情境 B ${res.totalGain > 0 ? ((res.gainB / res.totalGain) * 100).toFixed(1) : `0.0`}% · 情境 C ${res.totalGain > 0 ? ((res.gainC / res.totalGain) * 100).toFixed(1) : `0.0`}% · 情境 D ${res.totalGain > 0 ? ((res.gainD / res.totalGain) * 100).toFixed(1) : `0.0`}%
+          </div>
+        `;
+      }
+
+      renderWaterfallChart(res);
+      persistState();
+    }
+
+    function renderWaterfallChart(res) {
+      const canvas = document.getElementById(`waterfallChart`);
+      if (!canvas || typeof Chart === `undefined`) return;
+
+      const b = BASELINE_REV_115 / 1000000;
+      const gA = res.gainA / 1000000;
+      const gB = res.gainB / 1000000;
+      const gC = res.gainC / 1000000;
+      const gD = res.gainD / 1000000;
+      const tot = res.projected / 1000000;
+
+      const navy = getCssToken(`--data-1`);
+      const brass = getCssToken(`--data-2`);
+      const green = getCssToken(`--data-3`);
+      const slate = getCssToken(`--data-4`);
+      const claret = getCssToken(`--data-5`);
+      const gridColor = getCssToken(`--outline-variant`);
+      const ink = getCssToken(`--on-surface`);
+
+      // Floating waterfall ranges [start, end]
+      const dataBars = [
+        [0, b],
+        [b, b + gA],
+        [b + gA, b + gA + gB],
+        [b + gA + gB, b + gA + gB + gC],
+        [b + gA + gB + gC, tot],
+        [0, tot]
+      ];
+
+      if (waterfallChart) waterfallChart.destroy();
+      waterfallChart = new Chart(canvas, {
+        type: `bar`,
+        data: {
+          labels: [`115基準`, `A 付費率`, `B 夏夜開放`, `C 差別票價`, `D 免費導流`, `模擬總收入`],
+          datasets: [
+            {
+              label: `營收區間 (百萬元)`,
+              data: dataBars,
+              backgroundColor: [slate, green, brass, green, green, navy],
+              borderRadius: 2
+            },
+            {
+              type: `line`,
+              label: `114 年同期基準 (21.83M)`,
+              data: [21.834, 21.834, 21.834, 21.834, 21.834, 21.834],
+              borderColor: claret,
+              borderWidth: 2,
+              borderDash: [5, 4],
+              pointRadius: 0
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: `top`,
+              align: `end`,
+              labels: { color: ink, boxWidth: 12 }
+            },
+            tooltip: {
+              callbacks: {
+                label: function(ctx) {
+                  if (ctx.datasetIndex === 1) return `114 年同期基準：NT$ 21.83M`;
+                  const raw = ctx.raw;
+                  const diff = raw[1] - raw[0];
+                  if (ctx.dataIndex === 0 || ctx.dataIndex === 5) {
+                    return `金額：NT$ ${raw[1].toFixed(2)}M`;
+                  }
+                  return `淨增：+NT$ ${diff.toFixed(2)}M（累計至 NT$ ${raw[1].toFixed(2)}M）`;
+                }
+              }
+            }
+          },
+          scales: {
+            x: { grid: { display: false }, ticks: { color: ink } },
+            y: {
+              beginAtZero: true,
+              grid: { color: gridColor },
+              ticks: {
+                color: ink,
+                callback: function(val) { return `${val}M`; }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // Dedicated Dual-Input Handlers (No snap-back bug)
+    function onToggleChange() {
+      const ta = document.getElementById(`toggle-a`);
+      const tb = document.getElementById(`toggle-b`);
+      const tc = document.getElementById(`toggle-c`);
+      const td = document.getElementById(`toggle-d`);
+      if (ta) appState.sim.enabledA = ta.checked;
+      if (tb) appState.sim.enabledB = tb.checked;
+      if (tc) appState.sim.enabledC = tc.checked;
+      if (td) appState.sim.enabledD = td.checked;
+      updateSimulator();
+    }
+
+    function clampNum(v, min, max) {
+      const num = parseFloat(v);
+      if (Number.isNaN(num)) return min;
+      return Math.min(max, Math.max(min, num));
+    }
+
+    function syncAFromSlider(val) {
+      appState.sim.rateA = clampNum(val, 31.98, 45.00);
+      appState.sim.enabledA = true;
+      const inp = document.getElementById(`input-a`);
+      if (inp) inp.value = appState.sim.rateA.toFixed(2);
+      updateSimulator();
+    }
+    function syncAFromNumber(val) {
+      appState.sim.rateA = clampNum(val, 31.98, 45.00);
+      appState.sim.enabledA = true;
+      const sl = document.getElementById(`slider-a`);
+      if (sl) sl.value = appState.sim.rateA.toFixed(2);
+      updateSimulator();
+    }
+    function setScenarioAValue(val) {
+      appState.sim.rateA = val;
+      appState.sim.enabledA = true;
+      updateSimulator();
+    }
+
+    function syncBFromSlider(val) {
+      appState.sim.liftB = clampNum(val, 0, 50);
+      appState.sim.enabledB = true;
+      const inp = document.getElementById(`input-b`);
+      if (inp) inp.value = appState.sim.liftB;
+      updateSimulator();
+    }
+    function syncBFromNumber(val) {
+      appState.sim.liftB = clampNum(val, 0, 50);
+      appState.sim.enabledB = true;
+      const sl = document.getElementById(`slider-b`);
+      if (sl) sl.value = appState.sim.liftB;
+      updateSimulator();
+    }
+    function setScenarioBValue(val) {
+      appState.sim.liftB = val;
+      appState.sim.enabledB = true;
+      updateSimulator();
+    }
+
+    function syncCFromSlider(val) {
+      appState.sim.priceC = clampNum(val, 80, 120);
+      appState.sim.enabledC = true;
+      const inp = document.getElementById(`input-c`);
+      if (inp) inp.value = appState.sim.priceC;
+      updateSimulator();
+    }
+    function syncCFromNumber(val) {
+      appState.sim.priceC = clampNum(val, 80, 120);
+      appState.sim.enabledC = true;
+      const sl = document.getElementById(`slider-c`);
+      if (sl) sl.value = appState.sim.priceC;
+      updateSimulator();
+    }
+    function setScenarioCValue(val) {
+      appState.sim.priceC = val;
+      appState.sim.enabledC = true;
+      updateSimulator();
+    }
+
+    function syncDFromSlider(val) {
+      appState.sim.convD = clampNum(val, 0, 8.0);
+      appState.sim.enabledD = true;
+      const inp = document.getElementById(`input-d`);
+      if (inp) inp.value = appState.sim.convD.toFixed(1);
+      updateSimulator();
+    }
+    function syncDFromNumber(val) {
+      appState.sim.convD = clampNum(val, 0, 8.0);
+      appState.sim.enabledD = true;
+      const sl = document.getElementById(`slider-d`);
+      if (sl) sl.value = appState.sim.convD.toFixed(1);
+      updateSimulator();
+    }
+    function setScenarioDValue(val) {
+      appState.sim.convD = val;
+      appState.sim.enabledD = true;
+      updateSimulator();
+    }
+
+    function applyPreset(key) {
+      if (key === `baseline`) {
+        appState.sim = { enabledA: false, rateA: 31.98, enabledB: false, liftB: 0, enabledC: false, priceC: 80, enabledD: false, convD: 0.0 };
+      } else if (key === `rate35`) {
+        appState.sim = { enabledA: true, rateA: 35.00, enabledB: false, liftB: 25, enabledC: false, priceC: 100, enabledD: false, convD: 2.0 };
+      } else if (key === `rate114`) {
+        appState.sim = { enabledA: true, rateA: 42.37, enabledB: false, liftB: 25, enabledC: false, priceC: 100, enabledD: false, convD: 2.0 };
+      } else if (key === `balanced`) {
+        appState.sim = { enabledA: true, rateA: 35.00, enabledB: true, liftB: 25, enabledC: true, priceC: 100, enabledD: true, convD: 2.0 };
+      } else if (key === `max`) {
+        appState.sim = { enabledA: true, rateA: 42.37, enabledB: true, liftB: 25, enabledC: true, priceC: 100, enabledD: true, convD: 5.0 };
+      }
+      updateSimulator();
+      showToast(`已套用情境組合`);
+    }
+
+    function resetSimulator() {
+      appState.sim = JSON.parse(JSON.stringify(DEFAULT_STATE.sim));
+      updateSimulator();
+      showToast(`已重設模擬參數為穩健基準`);
+    }
+
+    function showToast(msg) {
+      const el = document.getElementById(`sim-status-msg`);
+      if (el) el.textContent = msg;
+    }
+
+    function exportSimulationCsv() {
+      const res = computeSimulation();
+      const lines = [
+        `淡水古蹟博物館營運分析暨營收模擬報表（15處場館口徑，已排除理學堂大書院）`,
+        `項目,數值,備註`,
+        `115年1-10月總參觀人次,${TOTAL_15_VISITORS},年增 +51.57%`,
+        `三大收費景點人次,${TICKETED_VISITORS},年增 +22.50%`,
+        `12處免費場館人次,${FREE_VISITORS},佔總人次 73.19%`,
+        `115年1-10月實際門票收入,${BASELINE_REV_115},年減 -7.58% (114年同期 21834480)`,
+        `模擬情境A增量,${Math.round(res.gainA)},目標付費率 ${appState.sim.rateA}%`,
+        `模擬情境B增量,${Math.round(res.gainB)},夏季夜間開放成長 ${appState.sim.liftB}%`,
+        `模擬情境C增量,${Math.round(res.gainC)},差別全票價 NT$${appState.sim.priceC}`,
+        `模擬情境D增量,${Math.round(res.gainD)},免費場館導流 ${appState.sim.convD}%`,
+        `模擬優化後總門票收入,${Math.round(res.projected)},合計淨增 ${Math.round(res.totalGain)}`,
+        ``,
+        `場館名稱,類別,1-10月總人次,佔比(%),假日人次,平日人次,隨機森林權重(%)`
+      ];
+      VENUES.forEach(v => {
+        lines.push(`${v.name},${v.categoryLabel},${v.total},${v.share.toFixed(2)},${v.holiday},${v.weekday},${v.rfWeight}`);
+      });
+
+      const csvContent = `\uFEFF` + lines.join(`\n`);
+      if (window.notebookAppApi && typeof window.notebookAppApi.triggerFileDownload === `function`) {
+        window.notebookAppApi.triggerFileDownload({
+          content: csvContent,
+          contentType: `text/csv`,
+          encoding: `UTF-8`,
+          filename: `tamsui_museum_simulation_15venues.csv`
+        });
+        showToast(`已匯出 CSV 分析報表`);
+      } else {
+        const blob = new Blob([csvContent], { type: `text/csv;charset=utf-8;` });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement(`a`);
+        a.href = url;
+        a.download = `tamsui_museum_simulation_15venues.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showToast(`已下載 CSV 分析報表`);
+      }
+    }
+
+    // =========================================================================
+    // 7. SECTION 05: ACTIONABLE STRATEGY PLAYBOOK & CHECKLIST
+    // =========================================================================
+    function setStrategyFilter(filter) {
+      appState.strategyFilter = filter;
+      [`all`, `immediate`, `seasonal`, `structural`].forEach(f => {
+        const btn = document.getElementById(`strat-${f}`);
+        if (btn) btn.classList.toggle(`is-active`, f === filter);
+      });
+      renderStrategies();
+      persistState();
+    }
+
+    function toggleStrategyCheck(id) {
+      const idx = appState.checkedStrategies.indexOf(id);
+      if (idx === -1) {
+        appState.checkedStrategies.push(id);
+      } else {
+        appState.checkedStrategies.splice(idx, 1);
+      }
+      updateChecklistSummary();
+      persistState();
+    }
+
+    function updateChecklistSummary() {
+      const el = document.getElementById(`checklist-progress-summary`);
+      if (el) {
+        el.textContent = `已標記優先推動策略：${appState.checkedStrategies.length} / ${STRATEGIES.length} 項`;
+      }
+    }
+
+    function renderStrategies() {
+      const grid = document.getElementById(`strategy-grid`);
+      if (!grid) return;
+
+      const list = STRATEGIES.filter(st => appState.strategyFilter === `all` || st.horizon === appState.strategyFilter);
+      grid.innerHTML = list.map(st => {
+        const checked = appState.checkedStrategies.includes(st.id) ? `checked` : ``;
+        return `
+          <article class="strategy-card">
+            <div class="strategy-top">
+              <div class="strategy-meta">
+                <span class="tag-stamp is-ticketed">${st.horizonLabel}</span>
+                <span class="tag-stamp is-positive">${st.scenarioTag}</span>
+              </div>
+              <h3 class="strategy-title">${st.title}</h3>
+              <p class="strategy-desc">${st.desc}</p>
+              <ul class="strategy-actions-list">
+                ${st.bullets.map(b => `<li>${b}</li>`).join(``)}
+              </ul>
+            </div>
+            <div class="strategy-check-row">
+              <label class="check-label">
+                <input type="checkbox" ${checked} onchange="toggleStrategyCheck('${st.id}')">
+                <span>納入本季優先推動清單</span>
+              </label>
+            </div>
+          </article>
+        `;
+      }).join(``);
+      updateChecklistSummary();
+    }
+
+    // =========================================================================
+    // 8. INITIALIZATION & HYDRATION
+    // =========================================================================
+    async function initApp() {
+      try {
+        if (window.notebookAppApi && typeof window.notebookAppApi.getAppState === `function`) {
+          const saved = await window.notebookAppApi.getAppState();
+          if (saved && typeof saved === `object`) {
+            if (saved.monthlyDayMode) appState.monthlyDayMode = saved.monthlyDayMode;
+            if (saved.venueCategory) appState.venueCategory = saved.venueCategory;
+            if (typeof saved.venueSearch === `string`) appState.venueSearch = saved.venueSearch;
+            if (saved.sortKey) appState.sortKey = saved.sortKey;
+            if (saved.sortDir) appState.sortDir = saved.sortDir;
+            if (saved.selectedVenueId) appState.selectedVenueId = saved.selectedVenueId;
+            if (saved.strategyFilter) appState.strategyFilter = saved.strategyFilter;
+            if (Array.isArray(saved.checkedStrategies)) appState.checkedStrategies = saved.checkedStrategies;
+            if (saved.sim && typeof saved.sim === `object`) {
+              appState.sim = Object.assign({}, DEFAULT_STATE.sim, saved.sim);
+            }
+          }
+        }
+      } catch (err) {
+        // Fallback cleanly to default state
+      }
+
+      // Sync UI filters
+      [`all`, `holiday`, `weekday`].forEach(m => {
+        const btn = document.getElementById(`btn-month-${m}`);
+        if (btn) btn.classList.toggle(`is-active`, m === appState.monthlyDayMode);
+      });
+      [`all`, `ticketed`, `free`].forEach(c => {
+        const btn = document.getElementById(`filter-cat-${c}`);
+        if (btn) btn.classList.toggle(`is-active`, c === appState.venueCategory);
+      });
+      const searchInp = document.getElementById(`venue-search`);
+      if (searchInp) searchInp.value = appState.venueSearch;
+      [`all`, `immediate`, `seasonal`, `structural`].forEach(f => {
+        const btn = document.getElementById(`strat-${f}`);
+        if (btn) btn.classList.toggle(`is-active`, f === appState.strategyFilter);
+      });
+
+      // Render charts & modules
+      renderMonthlyChart();
+      renderParadoxChart();
+      renderVenueSection();
+      renderRfChart();
+      updateSimulator();
+      renderStrategies();
+
+      if (window.notebookAppApi && typeof window.notebookAppApi.notifyAppReady === `function`) {
+        window.notebookAppApi.notifyAppReady();
+      }
+    }
+
+    document.addEventListener(`DOMContentLoaded`, initApp);
+  </script>
+</body>
+</html>
